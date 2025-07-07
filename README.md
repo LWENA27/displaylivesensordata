@@ -1,16 +1,17 @@
-# EC Sensor Monitor - Flutter Android App
+# Soil Sensor Monitor - Flutter Android App
 
-A Flutter Android application that connects to an HC-05 Bluetooth module to receive electrical conductivity (EC) sensor data from an Arduino Uno in real-time.
+A Flutter Android application that connects to an HC-05 Bluetooth module to receive pH and NPK sensor data from an Arduino Nano in real-time.
 
 ## Features
 
 - 🔵 **Bluetooth Connectivity**: Connect to HC-05 Bluetooth modules
-- 📊 **Real-time Data Display**: Shows EC sensor values in mS/cm
-- 🔄 **Automatic JSON Parsing**: Processes JSON messages like `{"ec": 2.15}`
-- 📱 **Modern UI**: Clean, Material Design 3 interface
+- 🌱 **pH Monitoring**: Real-time pH level display with status indicators
+- 📊 **NPK Ready**: Prepared for future Nitrogen, Phosphorus, Potassium sensors
+- 🔄 **Automatic JSON Parsing**: Processes JSON messages like `{"ph": 6.7}` and `{"ph": 6.7, "n": 50, "p": 40, "k": 60}`
+- 📱 **Modern UI**: Clean, Material Design 3 interface with soil-themed colors
 - 🔐 **Permission Management**: Automatic Bluetooth permission handling
 - 🔄 **Connection Status**: Visual indicators for connection state
-- 🎯 **Arduino Compatible**: Ready for Arduino Uno with EC sensors
+- 🎯 **Arduino Compatible**: Ready for Arduino Nano with soil sensors
 
 ## Screenshots
 
@@ -18,16 +19,18 @@ The app provides:
 - Bluetooth status monitoring
 - Device selection dropdown
 - Connect/Disconnect controls
-- Large EC value display with timestamp
+- pH level display with optimal/acceptable/poor indicators
+- NPK nutrient display (ready for future implementation)
 - Clear instructions for users
 
 ## Prerequisites
 
 ### Hardware Requirements
 - Android device with Bluetooth capability
-- Arduino Uno with EC sensor
+- Arduino Nano with pH sensor
 - HC-05 Bluetooth module
-- Properly wired EC sensor circuit
+- Properly wired pH sensor circuit
+- Future: NPK sensors (Nitrogen, Phosphorus, Potassium)
 
 ### Software Requirements
 - Flutter SDK (3.8.1 or higher)
@@ -55,7 +58,7 @@ The app provides:
 ## Arduino Setup
 
 ### Hardware Connections
-Connect your EC sensor to the Arduino Uno and HC-05 module:
+Connect your pH sensor to the Arduino Nano and HC-05 module:
 
 ```
 HC-05 Module:
@@ -64,43 +67,76 @@ HC-05 Module:
 - RX → Pin 2 (SoftwareSerial)
 - TX → Pin 3 (SoftwareSerial)
 
-EC Sensor:
-- Follow your specific EC sensor wiring diagram
-- Typically connects to analog pins
+pH Sensor:
+- Follow your specific pH sensor wiring diagram
+- Typically connects to analog pin A0
+- VCC → 5V, GND → GND, Signal → A0
+
+Future NPK Sensors:
+- Nitrogen sensor → A1
+- Phosphorus sensor → A2  
+- Potassium sensor → A3
 ```
 
 ### Arduino Code Example
 ```cpp
 #include <SoftwareSerial.h>
-#include <ArduinoJson.h>
 
 SoftwareSerial bluetooth(2, 3); // RX, TX
+const int PH_PIN = A0;
 
 void setup() {
   Serial.begin(9600);
   bluetooth.begin(9600);
+  pinMode(PH_PIN, INPUT);
 }
 
 void loop() {
-  // Read EC sensor value (replace with your sensor code)
-  float ecValue = readECSensor(); // Implement this function
+  // Read pH sensor value
+  float phValue = readPHSensor();
   
-  // Create JSON message
-  StaticJsonDocument<64> doc;
-  doc["ec"] = ecValue;
-  
-  // Send JSON to Flutter app
-  serializeJson(doc, bluetooth);
-  bluetooth.println(); // Add newline
+  // Create and send JSON message
+  bluetooth.print("{\"ph\":");
+  bluetooth.print(phValue, 1);
+  bluetooth.println("}");
   
   delay(1000); // Send data every second
 }
 
-float readECSensor() {
-  // Implement your EC sensor reading logic here
-  // This is a placeholder that returns a random value
-  return random(100, 500) / 100.0;
+float readPHSensor() {
+  // Read analog value and convert to pH
+  int analogValue = analogRead(PH_PIN);
+  float voltage = analogValue * 5.0 / 1024.0;
+  
+  // Convert voltage to pH (adjust formula for your sensor)
+  float phValue = 7.0 - ((voltage - 2.5) / 0.18);
+  
+  // Ensure valid pH range
+  if (phValue < 0) phValue = 0;
+  if (phValue > 14) phValue = 14;
+  
+  return phValue;
 }
+
+// Future NPK implementation example:
+/*
+void sendAllSensorData() {
+  float ph = readPHSensor();
+  int n = readNitrogenSensor();
+  int p = readPhosphorusSensor();
+  int k = readPotassiumSensor();
+  
+  bluetooth.print("{\"ph\":");
+  bluetooth.print(ph, 1);
+  bluetooth.print(",\"n\":");
+  bluetooth.print(n);
+  bluetooth.print(",\"p\":");
+  bluetooth.print(p);
+  bluetooth.print(",\"k\":");
+  bluetooth.print(k);
+  bluetooth.println("}");
+}
+*/
 ```
 
 ## App Usage
